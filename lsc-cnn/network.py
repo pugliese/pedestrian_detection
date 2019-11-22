@@ -1,6 +1,6 @@
 """
-network.py: Consists of the main architecture of LSC-CNN 
-Authors       : svp 
+network.py: Consists of the main architecture of LSC-CNN
+Authors       : svp
 """
 import torch
 import torch.nn as nn
@@ -23,6 +23,7 @@ class LSCCNN(nn.Module):
         layers = []
         in_channels = 3
         self.relu = nn.ReLU(inplace=True)
+        # Feature Extractor (VGG16)
         self.conv1_1 = nn.Conv2d(in_channels, 64, kernel_size=3, padding=1)
         self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -35,7 +36,7 @@ class LSCCNN(nn.Module):
         self.conv3_2 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.conv3_3 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-    
+
         self.conv4_1 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.conv4_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv4_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
@@ -45,65 +46,81 @@ class LSCCNN(nn.Module):
         self.conv5_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv5_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
 
+        # MFR(s=0) from concatenate to output 4
         self.convA_1 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.convA_2 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
         self.convA_3 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
         self.convA_4 = nn.Conv2d(64, 32, kernel_size=3, padding=1)
         self.convA_5 = nn.Conv2d(32, 4, kernel_size=3, padding=1)
-        
+
+        # MFR(s=1) from concatenate to output 4
         self.convB_1 = nn.Conv2d(512, 256, kernel_size=3, padding=1)
         self.convB_2 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
         self.convB_3 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
         self.convB_4 = nn.Conv2d(64, 32, kernel_size=3, padding=1)
         self.convB_5 = nn.Conv2d(32, 4, kernel_size=3, padding=1)
 
+        # MFR(s=2) from concatenate to output 4
         self.convC_1 = nn.Conv2d(384, 256, kernel_size=3, padding=1)
         self.convC_2 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
         self.convC_3 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
         self.convC_4 = nn.Conv2d(64, 32, kernel_size=3, padding=1)
         self.convC_5 = nn.Conv2d(32, 4, kernel_size=3, padding=1)
 
+        # MFR(s=3) from concatenate to output 4
         self.convD_1 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.convD_2 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
         self.convD_3 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
         self.convD_4 = nn.Conv2d(64, 32, kernel_size=3, padding=1)
         self.convD_5 = nn.Conv2d(32, 4, kernel_size=3, padding=1)
 
+        # MFR(s=0) channel 1 to output 3 & concat
         self.conv_before_transpose_1 = nn.Conv2d(512, 256, kernel_size=3, padding=1)
+        # MFR(s=1) transpose feedback from MFR(s=1)
         self.transpose_1 = nn.ConvTranspose2d(256, 256, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.conv_after_transpose_1_1 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        
+
+        # MFR(s=2) transpose feedback from MFR(s=1)
         self.transpose_2 = nn.ConvTranspose2d(256, 256, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.conv_after_transpose_2_1 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
-
+        # MFR(s=2) transpose feedback from MFR(s=0)
         self.transpose_3 = nn.ConvTranspose2d(256, 256, kernel_size=3, stride=4, padding=0, output_padding=1)
         self.conv_after_transpose_3_1 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
 
-
+        # MFR(s=3) transpose feedback from MFR(s=0) part 1
         self.transpose_4_1_a = nn.ConvTranspose2d(256, 256, kernel_size=3, stride=4, padding=0, output_padding=1)
+        # MFR(s=3) transpose feedback from MFR(s=0) part 2
         self.transpose_4_1_b = nn.ConvTranspose2d(256, 256, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.conv_after_transpose_4_1 = nn.Conv2d(256, 64, kernel_size=3, padding=1)
-        
+
+        # MFR(s=3) transpose feedback from MFR(s=1)
         self.transpose_4_2 = nn.ConvTranspose2d(256, 256, kernel_size=3, stride=4, padding=0, output_padding=1)
         self.conv_after_transpose_4_2 = nn.Conv2d(256, 64, kernel_size=3, padding=1)
 
+        # MFR(s=3) transpose feedback from MFR(s=2)
         self.transpose_4_3 = nn.ConvTranspose2d(128, 128, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.conv_after_transpose_4_3 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
-        
+
+        # Feature Extractor: 3C to output 3
         self.conv_middle_1 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.conv_middle_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv_middle_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
+        # MFR(s=1) channel 1 to output 3 & concat
         self.conv_mid_4 = nn.Conv2d(512, 256, kernel_size=3, padding=1)
 
+        # Feature Extractor: 3C to output 4
         self.conv_lowest_1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
         self.conv_lowest_2 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
         self.conv_lowest_3 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        # MFR(s=2) channel 1 to output 3 & concat
         self.conv_lowest_4 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
 
+        # Feature Extractor: 3C to output 5
         self.conv_scale1_1 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.conv_scale1_2 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        # MFR(s=3) channel 1 to output 3 & concat
         self.conv_scale1_3 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
-        
+
     # initialize all conv W' with a He normal initialization
     def _initialize_weights(self):
         if True:
@@ -126,7 +143,7 @@ class LSCCNN(nn.Module):
         mean_sub_input -= self.rgb_means
 
         #################### Stage 1 ##########################
-        
+
         main_out_block1 = self.relu(self.conv1_2(self.relu(self.conv1_1(mean_sub_input))))
         main_out_pool1 = self.pool1(main_out_block1)
 
@@ -138,34 +155,36 @@ class LSCCNN(nn.Module):
 
         main_out_block4 = self.relu(self.conv4_3(self.relu(self.conv4_2(self.relu(self.conv4_1(main_out_pool3))))))
         main_out_pool4 = self.pool3(main_out_block4)
-
+        # MFR(s=0) output 3 (feedback)
         main_out_block5 = self.relu(self.conv_before_transpose_1(self.relu(self.conv5_3(self.relu(self.conv5_2(self.relu(self.conv5_1(main_out_pool4))))))))
-
+        # MFR(s=0) output 4 (prediction)
         main_out_rest = self.convA_5(self.relu(self.convA_4(self.relu(self.convA_3(self.relu(self.convA_2(self.relu(self.convA_1(main_out_block5)))))))))
         if self.name == "scale_1":
             return main_out_rest
         ################## Stage 2 ############################
-
+        # MFR(s=1): output 3 (feeback)
         sub1_out_conv1 = self.relu(self.conv_mid_4(self.relu(self.conv_middle_3(self.relu(self.conv_middle_2(self.relu(self.conv_middle_1(main_out_pool3))))))))
+        # MFR(s=1): input 2 (feeback from s=0)
         sub1_transpose = self.relu(self.transpose_1(main_out_block5))
         sub1_after_transpose_1 = self.relu(self.conv_after_transpose_1_1(sub1_transpose))
-
+        # MFR(s=1): Concatenate
         sub1_concat = torch.cat((sub1_out_conv1, sub1_after_transpose_1), dim=1)
-
+        # MFR(s=1): Output to channel 4
         sub1_out_rest = self.convB_5(self.relu(self.convB_4(self.relu(self.convB_3(self.relu(self.convB_2(self.relu(self.convB_1(sub1_concat)))))))))
         if self.name == "scale_2":
             return main_out_rest, sub1_out_rest
         ################# Stage 3 ############################
-        
+        # MFR(s=2): output 3 (feeback)
         sub2_out_conv1 = self.relu(self.conv_lowest_4(self.relu(self.conv_lowest_3(self.relu(self.conv_lowest_2(self.relu(self.conv_lowest_1(main_out_pool2))))))))
+        # MFR(s=2): input 2 (feeback from s=1)
         sub2_transpose = self.relu(self.transpose_2(sub1_out_conv1))
         sub2_after_transpose_1 = self.relu(self.conv_after_transpose_2_1(sub2_transpose))
-        
+        # MFR(s=2): input 2 (feeback from s=0)
         sub3_transpose = self.relu(self.transpose_3(main_out_block5))
         sub3_after_transpose_1 = self.relu(self.conv_after_transpose_3_1(sub3_transpose))
-        
+        # MFR(s=2): Concatenate
         sub2_concat = torch.cat((sub2_out_conv1, sub2_after_transpose_1, sub3_after_transpose_1), dim=1)
-
+        # MFR(s=2): Output to channel 4
         sub2_out_rest = self.convC_5(self.relu(self.convC_4(self.relu(self.convC_3(self.relu(self.convC_2(self.relu(self.convC_1(sub2_concat)))))))))
 
         if self.name == "scale_3":
@@ -178,7 +197,7 @@ class LSCCNN(nn.Module):
         tdf_4_1_a = self.relu(self.transpose_4_1_a(main_out_block5))
         tdf_4_1_b = self.relu(self.transpose_4_1_b(tdf_4_1_a))
         after_tdf_4_1 = self.relu(self.conv_after_transpose_4_1(tdf_4_1_b))
-        
+
         # TDF 2
         tdf_4_2 = self.relu(self.transpose_4_2(sub1_out_conv1))
         after_tdf_4_2 = self.relu(self.conv_after_transpose_4_2(tdf_4_2))
